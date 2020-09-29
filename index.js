@@ -4,18 +4,21 @@ const { exec } = require('child_process')
 const m = require('./modules/complex-math');
 const Range = require('./modules/range');
 const HSVtoRGB = require('./modules/hsvtorgb');
+const { makeNoise2D } = require('open-simplex-noise')
+const noise2D = makeNoise2D(Date.now())
 
 const width = 1920;
 const height = 1080;
 const maxIterations = 600;
-const boundary = 16;
+const nImages = 30 * 20;
+const boundary = 32;
 
 const aspectRatio = width / height;
 
-const rangeVal = 0.04851130044675554;
+const rangeVal = 2;
 const xOff = 0;
 const yOff = 0;
-const sides = 3;
+const sides = 1;
 
 
 let now = Date.now();
@@ -31,64 +34,71 @@ let genColor = function (n) {
     let h = ((1 - Math.sqrt(n / (maxIterations + 1))) * 360);
     let b = (n / maxIterations);
     let s = 1 - b;
-    let color = HSVtoRGB(h, s, s);
-    // let color = {
-    //     r: gs, g: gs, b: gs
-    // }
+    let color = HSVtoRGB(h, h, 1 - h);
     return color;
 }
 
 fs.mkdirSync(`./output/${now}`);
+for (let images = 0; images < nImages; images++) {
+    let angle = Math.PI * 2 * images / nImages
+    // let xOff = Math.cos(angle)
+    // let yOff = Math.sin(angle)
+    // let kindAngle = Math.PI * 2 * (noise2D(xOff, yOff) + 1) / 2
+    let c = m.fromAngle(angle);
+    c = m.smult(c, 1 / 4)
+    // m.smult(c, )
 
-for (let quads = 0; quads < sides * sides; quads++) {
+    for (let quads = 0; quads < sides * sides; quads++) {
 
-    let pngArr = [];
-    range.calcOffset(quads);
+        let pngArr = [];
+        range.calcOffset(quads);
 
-    console.log(`Calculating ${maxIterations} iterations for ${width * height} pixels. ${quads + 1}/${sides * sides}`)
+        console.log(`Calculating ${maxIterations} iterations for ${width * height} pixels. Quadrant ${quads + 1}/${sides * sides}, Image ${images + 1}/${nImages}`)
 
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
 
-            let a = map(x, 0, width, range.x.min, range.x.max);
-            let b = map(y, 0, height, range.y.min, range.y.max);
+                let a = map(x, 0, width, range.x.min, range.x.max);
+                let b = map(y, 0, height, range.y.min, range.y.max);
 
-            let c = { re: a, im: b };
-            let z = { re: 0, im: 0 };
-            let i = 0;
+                let z = { re: a, im: b };
+                let i = 0;
 
-            for (; i < maxIterations; i++) {
-                //Fractal definition
-                z = m.exp(m.divide(m.pow(z, 3), m.pow(c, 3)));
-                // z = m.divide(z, m.sq(c));
-                // z = m.add(m.sq(z), c);
-                //
-                if (m.abs(z) > boundary) break;
+                for (; i < maxIterations; i++) {
+                    //Fractal definition
+
+                    z = m.add(m.sq(z), c)
+                    if (m.abs(z) > boundary) break;
+                }
+
+
+                let color = genColor(i);
+                pngArr.push(color.r)
+                pngArr.push(color.g)
+                pngArr.push(color.b)
+
+
             }
-
-            let color = genColor(i);
-            pngArr.push(color.r)
-            pngArr.push(color.g)
-            pngArr.push(color.b)
         }
+
+        console.log('Done Generating... Creating the image');
+
+        let pngObj = {
+            width: width,
+            height: height,
+            data: pngArr,
+            depth: 16,
+            channels: 3
+        }
+
+        let encodedArr = PNG.encode(pngObj);
+        let imgStr = images.toString()
+        imgStr = imgStr.padStart(nImages.toString().length, '0')
+        fs.writeFileSync(`./output/${now}/out${quads}-image${imgStr}.png`, encodedArr);
+        console.log('Image created');
     }
 
-    console.log('Done Generating... Creating the image');
-
-    let pngObj = {
-        width: width,
-        height: height,
-        data: pngArr,
-        depth: 16,
-        channels: 3
-    }
-
-    let encodedArr = PNG.encode(pngObj);
-    fs.writeFileSync(`./output/${now}/out${quads}.png`, encodedArr);
-    console.log('Image created');
+    if (sides > 1) exec(`node stitcher --folder ${now} --image ${images} --width ${width} --height ${height} --sides ${sides}`);
 }
 
-exec(`node stitcher --folder ${now} --width ${width} --height ${height} --sides ${sides}`);
-
-
-
+if (nImages > 1 && sides === 1) exec(`ffmpeg -i ./output/${now}/out0-image%03d.png -c:v libx264 -vf "fps=30,format=yuv420p" ./output/${now}/out.mp4`)

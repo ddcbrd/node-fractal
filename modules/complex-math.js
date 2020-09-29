@@ -46,35 +46,6 @@ module.exports = {
             w = this.mult(z, w);
         }
         return w;
-        // let coeff = euler(n);
-        // let coeff = eulerTriangle[n];
-        // let im = 0;
-        // let re = 0;
-        // for (let i = 0; i < coeff.length; i++) {
-        //     let aP = coeff.length - i - 1;
-        //     let a = Math.pow(z.re, aP);
-        //     let b = Math.pow(z.im, i);
-
-        //     switch (i % 4) {
-        //         case 1: { //i^1 im
-        //             im += coeff[i] * a * b
-        //             break;
-        //         }
-        //         case 2: { //i^2 -re
-        //             re += -1 * coeff[i] * a * b
-        //             break;
-        //         }
-        //         case 3: { //i^3 -im
-        //             im += -1 * coeff[i] * a * b
-        //             break;
-        //         }
-        //         case 0: { //i^4 re
-        //             re += coeff[i] * a * b
-        //             break;
-        //         }
-        //     }
-        // }
-        // return { re: re, im: im }
     },
     sqrt(z) {
         let r = Math.sqrt(z.re * z.re + z.im * z.im);
@@ -100,6 +71,14 @@ module.exports = {
         let re = Math.sin(z.re) * Math.cosh(z.im);
         let im = -Math.cos(z.re) * Math.sinh(z.im);
         return { re: re, im: im }
+    },
+    fromAngle(a) {
+        let re = Math.cos(a)
+        let im = Math.sin(a)
+        return { re: re, im: im }
+    },
+    smult(z, s) {
+        return { re: z.re * s, im: z.im * s }
     }
 }
 

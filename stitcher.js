@@ -16,7 +16,7 @@ let getCoord = function (n) {
 let promises = [];
 
 for (let i = 0; i < argv.sides * argv.sides; i++) {
-    promises.push(loadImage(`./output/${argv.folder}/out${i}.png`));
+    promises.push(loadImage(`./output/${argv.folder}/out${i}-image${argv.image}.png`));
 }
 
 Promise.all(promises)
